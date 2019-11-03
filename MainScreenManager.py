@@ -1,4 +1,9 @@
 import kivy
+import time
+import board
+import busio
+import adafruit_ads1x15.ads1115 as ADS
+from adafruit_ads1x15.analog_in import AnalogIn
 from kivy.uix.gridlayout import GridLayout
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -8,44 +13,84 @@ from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.lang import Builder
 from kivy.properties import ListProperty
 from kivy.uix.popup import Popup
+from kivy.clock import Clock
 
 from kivy.config import Config
-Config.set('graphics', 'width', '2560')
-Config.set('graphics', 'height', '1440')
+
+Config.set('graphics', 'width', '1920')
+Config.set('graphics', 'height', '1080')
+
+# create i2c Bus
+i2c = busio.I2C(board.SCL, board.SDA)
+# create the ADC object using i2c bus
+ads = ADS.ADS1115(i2c)
+# create single-ended input on channel 0
+chan = AnalogIn(ads, ADS.P0)
+chan1 = AnalogIn(ads, ADS.P1)
+chan2 = AnalogIn(ads, ADS.P2)
+chan3 = AnalogIn(ads, ADS.P3)
+
 
 class MainScreen(Screen):
     pass
+
 
 class AdminLoginScreen(Screen):
     def verify_credentials(self):
         if self.ids["login"].text == "username" and self.ids["passw"].text == "password":
             self.manager.current = "settings"
+
+
 class Experiment1(Screen):
+    voltage = str(chan.voltage)
+    voltage1 = str(chan1.voltage)
+    voltage2 = str(chan2.voltage)
+
+    def __init__(self, **kwargs):
+        super(Screen, self).__init__(**kwargs)
+        Clock.schedule_interval(self.update_temp, 1)
+
+    def update_temp(self, dt):
+        voltage = str(chan.voltage)
+        voltage1 = str(chan1.voltage)
+        voltage2 = str(chan2.voltage)
+        self.ids['waterTemp'].text = voltage
+        self.ids['flumeAngle'].text = voltage1
+        self.ids['valvePos'].text = voltage2
+
     def switch_color(self):
         if self.ids['start1'].text == 'Start':
-            self.ids['start1'].background_color = 1, 0,0,1
+            self.ids['start1'].background_color = 1, 0, 0, 1
             self.ids['start1'].text = 'Stop'
         else:
             self.ids['start1'].background_color = 0, 1, 0, 1
             self.ids['start1'].text = 'Start'
+
+
 class Experiment2(Screen):
     def switch_color(self):
         if self.ids['start2'].text == 'Start':
-            self.ids['start2'].background_color = 1, 0,0,1
+            self.ids['start2'].background_color = 1, 0, 0, 1
             self.ids['start2'].text = 'Stop'
         else:
             self.ids['start2'].background_color = 0, 1, 0, 1
             self.ids['start2'].text = 'Start'
+
+
 class OpenMode(Screen):
     def switch_color(self):
         if self.ids['openStart'].text == 'Start':
-            self.ids['openStart'].background_color = 1, 0,0,1
+            self.ids['openStart'].background_color = 1, 0, 0, 1
             self.ids['openStart'].text = 'Stop'
         else:
             self.ids['openStart'].background_color = 0, 1, 0, 1
             self.ids['openStart'].text = 'Start'
+
+
 class AdminSettingsScreen(Screen):
     pass
+
+
 class MyScreenManager(ScreenManager):
     pass
 
@@ -53,7 +98,7 @@ class MyScreenManager(ScreenManager):
 root_widget = Builder.load_string('''
 MyScreenManager:
     MainScreen:
-    AdminLoginScreen:   
+    AdminLoginScreen:  
     Experiment1:
     Experiment2:
     OpenMode:
@@ -76,7 +121,7 @@ MyScreenManager:
                 font_size: 40
                 on_release: app.root.current = 'open'
         FloatLayout:
-            Button: 
+            Button:
                 text: 'Admin Tools'
                 font_size: 40
                 size_hint: (.3,.15)
@@ -137,7 +182,7 @@ MyScreenManager:
         Label:
             font_size: 25
             text: 'Actual Flow Rate'
-        TextInput: 
+        TextInput:
             multiline: False
             size_hint_y: .1
             id : actualflow
@@ -148,6 +193,7 @@ MyScreenManager:
             multiline: False
             size_hint_y: .1
             id: waterTemp
+            text: root.voltage
         Label:
             text: 'Flume Angle'
             font_size: 25
@@ -155,13 +201,15 @@ MyScreenManager:
             multiline: False
             size_hint_y: .1
             id: flumeAngle
+            text: root.voltage1
         Label:
             text: 'Valve Positioning'
             font_size: 25
-        TextInput: 
+        TextInput:
             multiline: False
             size_hint_y: .1
             id: valvePos
+            text: root.voltage2
     FloatLayout:
         Button:
             size_hint_y: .2
@@ -195,7 +243,7 @@ MyScreenManager:
         Label:
             font_size: 25
             text: 'Actual Flow Rate'
-        TextInput: 
+        TextInput:
             multiline: False
             size_hint_y: .1
             id : actualflow
@@ -216,7 +264,7 @@ MyScreenManager:
         Label:
             text: 'Valve Positioning'
             font_size: 25
-        TextInput: 
+        TextInput:
             multiline: False
             size_hint_y: .1
             id: valvePos
@@ -253,7 +301,7 @@ MyScreenManager:
         Label:
             font_size: 25
             text: 'Actual Flow Rate'
-        TextInput: 
+        TextInput:
             multiline: False
             size_hint_y: .1
             id : actualflow
@@ -274,7 +322,7 @@ MyScreenManager:
         Label:
             text: 'Valve Positioning'
             font_size: 25
-        TextInput: 
+        TextInput:
             multiline: False
             size_hint_y: .1
             id: valvePos
@@ -318,5 +366,6 @@ MyScreenManager:
 class ScreenManagerApp(App):
     def build(self):
         return root_widget
+
 
 ScreenManagerApp().run()
