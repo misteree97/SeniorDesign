@@ -76,7 +76,6 @@ class Experiment2(Screen):
             self.ids['start2'].background_color = 0, 1, 0, 1
             self.ids['start2'].text = 'Start'
 
-
 class OpenMode(Screen):
     def switch_color(self):
         if self.ids['openStart'].text == 'Start':
