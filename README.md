@@ -4,8 +4,7 @@ Senior Design project
 ##To Run
 Install Kivy
 Ensure you have the latest pip, wheel, and virtualenv:
-
-python -m pip install --upgrade pip wheel setuptools virtualenv
+   wheel setuptools virtualenv
 
 Install the dependencies (skip gstreamer (~120MB) if not needed, see Kivy’s dependencies). If you are upgrading Kivy, see Updating Kivy from a previous release:
 

@@ -1,9 +1,5 @@
 import kivy
-import time
-import board
-import busio
-import adafruit_ads1x15.ads1115 as ADS
-from adafruit_ads1x15.analog_in import AnalogIn
+from kivy.uix.checkbox import CheckBox
 from kivy.uix.gridlayout import GridLayout
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -13,26 +9,12 @@ from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.lang import Builder
 from kivy.properties import ListProperty
 from kivy.uix.popup import Popup
-from kivy.clock import Clock
+from kivy.uix.slider import Slider
 
 from kivy.config import Config
 
 Config.set('graphics', 'width', '1920')
 Config.set('graphics', 'height', '1080')
-
-# create i2c Bus
-i2c = busio.I2C(board.SCL, board.SDA)
-# create the ADC object using i2c bus
-ads = ADS.ADS1115(i2c)
-# create single-ended input on channel 0
-chan = AnalogIn(ads, ADS.P0)
-chan1 = AnalogIn(ads, ADS.P1)
-chan2 = AnalogIn(ads, ADS.P2)
-chan3 = AnalogIn(ads, ADS.P3)
-
-
-class MainScreen(Screen):
-    pass
 
 
 class AdminLoginScreen(Screen):
@@ -41,40 +23,24 @@ class AdminLoginScreen(Screen):
             self.manager.current = "settings"
 
 
-class Experiment1(Screen):
-    voltage = str(chan.voltage)
-    voltage1 = str(chan1.voltage)
-    voltage2 = str(chan2.voltage)
-
-    def __init__(self, **kwargs):
-        super(Screen, self).__init__(**kwargs)
-        Clock.schedule_interval(self.update_temp, 1)
-
-    def update_temp(self, dt):
-        voltage = str(chan.voltage)
-        voltage1 = str(chan1.voltage)
-        voltage2 = str(chan2.voltage)
-        self.ids['waterTemp'].text = voltage
-        self.ids['flumeAngle'].text = voltage1
-        self.ids['valvePos'].text = voltage2
+class Experiment(Screen):
+    def verify_inputs(self):
+        desiredFlow = self.ids[''].text
+        if desiredFlow < 0:
+            print("please enter a value > 0")
 
     def switch_color(self):
-        if self.ids['start1'].text == 'Start':
-            self.ids['start1'].background_color = 1, 0, 0, 1
-            self.ids['start1'].text = 'Stop'
+        if self.ids['start'].text == 'Start':
+            self.ids['start'].background_color = 1, 0, 0, 1
+            self.ids['start'].text = 'Stop'
+            pops = PanicPopup
+            pops.fire_panic_popup(self)
         else:
-            self.ids['start1'].background_color = 0, 1, 0, 1
-            self.ids['start1'].text = 'Start'
+            self.ids['start'].background_color = 0, 1, 0, 1
+            self.ids['start'].text = 'Start'
+            pops = WarningPopup
+            pops.fire_warning_popup(self)
 
-
-class Experiment2(Screen):
-    def switch_color(self):
-        if self.ids['start2'].text == 'Start':
-            self.ids['start2'].background_color = 1, 0, 0, 1
-            self.ids['start2'].text = 'Stop'
-        else:
-            self.ids['start2'].background_color = 0, 1, 0, 1
-            self.ids['start2'].text = 'Start'
 
 class OpenMode(Screen):
     def switch_color(self):
@@ -94,44 +60,34 @@ class MyScreenManager(ScreenManager):
     pass
 
 
+class WarningPopup(Popup):
+    text = "Warning! Water Level Has Reached Warning Level"
+
+    def fire_warning_popup(self):
+        pops = WarningPopup()
+        pops.open()
+
+
+class PanicPopup(Popup):
+    text = "PANIC! VFD SHUTTING DOWN TURN OFF WATER"
+
+    def fire_panic_popup(self):
+        pops = PanicPopup()
+        pops.open()
+
+
 root_widget = Builder.load_string('''
 MyScreenManager:
-    MainScreen:
+    Experiment:
     AdminLoginScreen:  
-    Experiment1:
-    Experiment2:
     OpenMode:
     AdminSettingsScreen:
-<MainScreen>:
-    name: 'main'
-    BoxLayout:
-        BoxLayout:
-            orientation: 'vertical'
-            Button:
-                text: 'Experiment 1'
-                font_size: 40
-                on_release: app.root.current = 'exper1'
-            Button:
-                text: 'Experiment 2'
-                font_size: 40
-                on_release: app.root.current = 'exper2'
-            Button:
-                text: 'Open Mode'
-                font_size: 40
-                on_release: app.root.current = 'open'
-        FloatLayout:
-            Button:
-                text: 'Admin Tools'
-                font_size: 40
-                size_hint: (.3,.15)
-                pos_hint: {'x' :.7, 'center_y' :.95}
-                on_release: app.root.current = 'login'
 <AdminLoginScreen>:
     name: 'login'
     GridLayout:
         pos_hint: {'x' : .0, 'center_y' : .25}
         row_force_default: True
-        row_default_height: 150
+        row_default_height: 100
         cols: 2
         orientation: 'vertical'
         Label:
@@ -152,130 +108,95 @@ MyScreenManager:
         Button:
             text: "Back"
             font_size: 40
-            on_release: app.root.current = 'main'
+            on_release: app.root.current = 'exper'
         Button:
             text: "Sign In"
             font_size:40
             on_release: root.verify_credentials()
-<Experiment1>:
-    name: 'exper1'
+<Experiment>:
+    name: 'exper'
     FloatLayout:
         Button:
-            text: 'Back'
+            text: 'Admin Tools'
             font_size: 40
             size_hint: (.2,.15)
-            pos_hint: {'x' :0, 'center_y': .95}
-            on_release: app.root.current = 'main'
+            pos_hint: {'x' :.8, 'center_y' :.95}
+            on_release: app.root.current = 'login'        
     GridLayout:
-        pos_hint: {'x' : .0, 'center_y' : .25}
+        pos_hint: {'x' : -.05, 'center_y' : .3}
         row_force_default: True
-        row_default_height: 150
-        cols:4
+        row_default_height:100
+        cols:3
         Label:
             text: 'Desired Flow Rate'
             font_size : 25
-        TextInput:
-            multiline: False
-            size_hint_y: .1
-            id : desiredflow
+        Slider:
+            id: desiredSlider
+            min: 0 
+            max: 100
+            step: 1
+        Label:
+            text: str(desiredSlider.value) + ' m/s'
+            font_size: 25
+    GridLayout:
+        pos_hint: {'x' : -.05, 'center_y' : .1}
+        row_force_default: True
+        row_default_height: 100
+        cols: 4
         Label:
             font_size: 25
             text: 'Actual Flow Rate'
-        TextInput:
-            multiline: False
-            size_hint_y: .1
-            id : actualflow
+        Label:
+            text: '____ m/s'
+            font_size: 25
         Label:
             text: 'Water Temp'
             font_size: 25
-        TextInput:
-            multiline: False
-            size_hint_y: .1
-            id: waterTemp
-            text: root.voltage
+        Label:
+            text: '____ F/C'
+            font_size: 25
         Label:
             text: 'Flume Angle'
             font_size: 25
-        TextInput:
-            multiline: False
-            size_hint_y: .1
+        Label:
             id: flumeAngle
-            text: root.voltage1
+            text: '_____'
+            font_size: 25
         Label:
             text: 'Valve Positioning'
             font_size: 25
-        TextInput:
-            multiline: False
-            size_hint_y: .1
+        Label:
             id: valvePos
-            text: root.voltage2
+            text: '______'
+            font_size: 25
     FloatLayout:
         Button:
             size_hint_y: .2
             font_size: 40
-            pos_hint:{'x' : 0, 'center_y': .10}
+            pos_hint:{'x' : 0.25, 'center_y': .10}
+            size_hint: (.5, .25)
             text: 'Start'
             background_color: 0,1,0,1
-            id: start1
+            id: start
             on_release: root.switch_color()
-<Experiment2>:
-    name: 'exper2'
-    FloatLayout:
-        Button:
-            text: 'Back'
-            font_size: 40
-            size_hint: (.2,.15)
-            pos_hint: {'x' :0, 'center_y': .95}
-            on_release: app.root.current = 'main'
-    GridLayout:
-        pos_hint: {'x' : .0, 'center_y' : .25}
-        row_force_default: True
-        row_default_height: 150
-        cols:4
-        Label:
-            text: 'Desired Flow Rate'
-            font_size : 25
-        TextInput:
-            multiline: False
-            size_hint_y: .1
-            id : desiredflow
-        Label:
-            font_size: 25
-            text: 'Actual Flow Rate'
-        TextInput:
-            multiline: False
-            size_hint_y: .1
-            id : actualflow
-        Label:
-            text: 'Water Temp'
-            font_size: 25
-        TextInput:
-            multiline: False
-            size_hint_y: .1
-            id: waterTemp
-        Label:
-            text: 'Flume Angle'
-            font_size: 25
-        TextInput:
-            multiline: False
-            size_hint_y: .1
-            id: flumeAngle
-        Label:
-            text: 'Valve Positioning'
-            font_size: 25
-        TextInput:
-            multiline: False
-            size_hint_y: .1
-            id: valvePos
-    FloatLayout:
-        Button:
-            size_hint_y: .2
-            font_size: 40
-            pos_hint:{'x' : 0, 'center_y': .10}
-            text: 'Start'
-            background_color: 0,1,0,1
-            id: start2
-            on_release: root.switch_color()
+<PanicPopup>:
+    id:panicPop
+    size_hint: .4, .4
+    auto_dismiss: False
+    title: "PANIC"
+    Button:
+        text: 'Click to dismiss'
+        on_press: panicPop.dismiss()
+<WarningPopup>:
+    id: warningPop
+    size_hint: .4, .4
+    auto_dismiss: False
+    title: 'Warning'
+    text: 'Warning! Water Level Has Reached Warning Level'
+    Button:
+        text: 'Click to dismiss'
+        on_press: warningPop.dismiss()
+
 <OpenMode>:
     name: 'open'
     FloatLayout:
@@ -286,24 +207,38 @@ MyScreenManager:
             pos_hint: {'x' :0, 'center_y': .95}
             on_release: app.root.current = 'main'
     GridLayout:
-        pos_hint: {'x' : .0, 'center_y' : .25}
+        pos_hint: {'x' : -.05, 'center_y' : .25}
         row_force_default: True
-        row_default_height: 150
-        cols:4
+        row_default_height: 100
+        cols:3
         Label:
             text: 'Desired Flow Rate'
             font_size : 25
+        Slider:
+            id: desiredSlider2
+            min: 0
+            max: 100
+            step: 1
         TextInput:
             multiline: False
             size_hint_y: .1
             id : desiredflow
+            text: str(desiredSlider2.value)
+            font_size: 25
+            input_filter: 'float'
+    GridLayout:
+        pos_hint: {'x' :-.05, 'center_y' : .1}
+        row_force_default: True
+        row_default_height: 100
+        cols: 4
         Label:
             font_size: 25
             text: 'Actual Flow Rate'
-        TextInput:
+        TextInput: 
             multiline: False
             size_hint_y: .1
             id : actualflow
+            readonly: True
         Label:
             text: 'Water Temp'
             font_size: 25
@@ -311,6 +246,7 @@ MyScreenManager:
             multiline: False
             size_hint_y: .1
             id: waterTemp
+            readonly: True 
         Label:
             text: 'Flume Angle'
             font_size: 25
@@ -318,13 +254,24 @@ MyScreenManager:
             multiline: False
             size_hint_y: .1
             id: flumeAngle
+            readonly: True
         Label:
             text: 'Valve Positioning'
             font_size: 25
-        TextInput:
+        TextInput: 
             multiline: False
             size_hint_y: .1
             id: valvePos
+            readonly: True
+    FloatLayout:
+        Button:
+            size_hint_y: .2
+            font_size: 40
+            pos_hint:{'x' : 0, 'center_y': .10}
+            text: 'Start'
+            background_color: 0,1,0,1
+            id: start2
+            on_release: root.switch_color()
     FloatLayout:
         Button:
             size_hint_y: .2
@@ -342,23 +289,76 @@ MyScreenManager:
             font_size: 40
             size_hint: (.2,.15)
             pos_hint: {'x' :0, 'center_y': .95}
-            on_release: app.root.current = 'main'
+            on_release: app.root.current = 'main'   
+        Button:
+            text: 'Open Mode'
+            font_size: 40
+            size_hint: (.2,.15)
+            pos_hint: {'x' :.8, 'center_y' :.95}
+            on_release: app.root.current = 'open'
     GridLayout:
-        cols: 2
+        pos_hint: {'x' : .0, 'center_y' : .25}
+        row_force_default: True
+        row_default_height: 150
+        cols:3
+        orientation: 'vertical'
         Label:
-            text: 'Max Flow Rate'
-            font_size: 25
-        TextInput:
-            multiline: False
-            size_hint_y:.1
-            id: maxFlowRate
-        Label:
-            text: 'Min Flow Rate'
-            font_size: 25
+            text: 'Set Max Flow Rate'
+            font_size : 25
+        Slider:
+            id:MaxFlowSlider
+            min: 0
+            max: 100
+            step: 1
         TextInput:
             multiline: False
             size_hint_y: .1
-            id: minFlowRate
+            id : maxFlow
+            text: str(MaxFlowSlider.value)
+            font_size : 40
+        Label:
+            font_size: 25
+            text: 'Set Min Flow Rate'
+        Slider:
+            id:MinFlowSlider
+            min: 0
+            max: 100
+            step: 1
+        TextInput: 
+            multiline: False
+            size_hint_y: .1
+            id : minFlow
+            text: str(MinFlowSlider.value)
+            font_size: 40
+        Label:
+            text: 'Set Warning Level'
+            font_size: 25
+        Slider:
+            id:WarningSlider
+            min: 0
+            max: 100
+            step: 1
+        TextInput:
+            multiline: False
+            size_hint_y: .1
+            id: warningLevel
+            text: str(WarningSlider.value)
+            font_size: 40 
+        Label:
+            text: 'Set Panic Level'
+            font_size: 25
+        Slider:
+            id:PanicSlider
+            min: 0
+            max: 100
+            step: 1
+        TextInput:
+            multiline: False
+            size_hint_y: .1
+            id: panicLevel
+            text: str(PanicSlider.value)
+            font_size: 40 
+
  ''')
 
 
