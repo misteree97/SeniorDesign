@@ -1,0 +1,69 @@
+temp sensor slow:
+https://raspberrypi.stackexchange.com/questions/44992/why-are-one-wire-temperature-sensor-readings-so-slow
+
+temp sensor code:
+https://thepihut.com/blogs/raspberry-pi-tutorials/ds18b20-one-wire-digital-temperature-sensor-and-the-raspberry-pi
+
+units:
+cubic ft per sec - 7 is about max (2dp)
+gallon per sec
+liters per sec
+cubic meters per sec
+
+FVD Config options:
+from 100% -> 0% (30 second ramp down)
+s1 connects to sn (start (relay))
+term FM gain to 333
+0-10 v is normal range, the gail will scale that
+h3-03 Term A1 Gain (scales up to 10V) - set to 300%
+
+
+slowly ramp up until flow starts
+-> if air in lines, 0 flow rate will happen
+	-> warn user, and maintain current pump rate
+	-> after 5 mins, ramp down pump
+
+go back to (closed - 0.445) (open - 1.454)
+
+need to know:
+max of flow rate - 6.127 f^3/sec (20ma - 2v) (.4 - 0f^3/sec) (1V 
+2250
+
+0.95x + 100y = 273
+
+y = 
+//
+TextInput:
+            foreground_color: (1,1,1,1)
+            background_color: (0,0,0,0)
+            text: "%05.2f F^3/s"%(desiredSlider.value)
+            font_size: 25
+
+Button:
+            id:DropDownButton
+            text: 'F^3/s'
+            size_hint: (None,None)
+            on_parent: drop_content.dismiss()
+            on_release: drop_content.open(self)
+        DropDown:
+            id: drop_content
+            on_select: btn.text = '{}'.format(args[1])
+            
+            Button:
+                id: btn1
+                text: 'F^3/s'
+                size_hint_y: None
+                height:35
+                on_select: (lambda instance, x: setattr(mainbutton, 'text', x))
+            Button:
+                id: btn2
+                text: '2nd unit'
+                size_hint_y: None
+                height: 35
+                on_release: drop_content.select('2nd unit')
+            Button:
+                id: text: btn3
+                text: '3rd unit'
+                size_hint_y: None
+                height: 35
+                on_release: drop_content.select('3rd unit')
